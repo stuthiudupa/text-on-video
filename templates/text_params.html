@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Text Parameters</title>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial frame
+            const initialImageUrl = '/static/initial_frame.jpg';
+            document.getElementById('previewImage').src = initialImageUrl;
+        });
+
+        function generatePreview(event) {
+            event.preventDefault();  // Prevent the form from submitting the traditional way
+
+            const formData = new FormData(document.getElementById('textParamsForm'));
+
+            fetch('/preview', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const imgElement = document.getElementById('previewImage');
+                imgElement.src = data.preview_image_url + '?' + new Date().getTime();  // Append a timestamp to prevent caching
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function setTextParams() {
+            document.getElementById("hidden_stext").value = document.getElementById("stext").value;
+            document.getElementById("hidden_font_size").value = document.getElementById("font_size").value;
+            document.getElementById("hidden_color").value = document.getElementById("color").value;
+            document.getElementById("hidden_position_x").value = document.getElementById("position_x").value;
+            document.getElementById("hidden_position_y").value = document.getElementById("position_y").value;
+        }
+    </script>
+</head>
+<body>
+    <h2>Text Parameters</h2>
+    <form id="textParamsForm" onsubmit="generatePreview(event)">
+        <div>
+            <label for="stext">Text:</label>
+            <input type="text" id="stext" name="stext" value="Sample Text">
+        </div>
+        <div>
+            <label for="font_size">Font Size:</label>
+            <input type="number" id="font_size" name="font_size" value="50">
+        </div>
+        <div>
+            <label for="color">Color:</label>
+            <input type="text" id="color" name="color" value="white">
+        </div>
+        <div>
+            <label for="font">Font:</label>
+            <input type="text" id="font" name="font" value="cambria">
+        </div>
+        <div>
+            <label for="position_x">Position X:</label>
+            <input type="text" id="position_x" name="position_x" value="center">
+        </div>
+        <div>
+            <label for="position_y">Position Y:</label>
+            <input type="text" id="position_y" name="position_y" value="center">
+        </div>
+        <button type="submit">Generate Preview</button>
+    </form>
+
+    <h2>Preview</h2>
+    <img id="previewImage" src="#" alt="Text Preview" style="display:block; width:500px; height:auto;">
+
+    <h2>Process Videos</h2>
+    <form action="{{ url_for('process_videos') }}" method="post">
+        <input type="hidden" name="stext" id="hidden_stext">
+        <input type="hidden" name="font_size" id="hidden_font_size">
+        <input type="hidden" name="color" id="hidden_color">
+        <input type="hidden" name="font" id="hidden_font">
+        <input type="hidden" name="position_x" id="hidden_position_x">
+        <input type="hidden" name="position_y" id="hidden_position_y">
+        <button type="submit" onclick="setTextParams()">Process Videos</button>
+    </form>
+</body>
+</html>

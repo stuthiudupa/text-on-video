@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Upload Files</title>
+        <script>
+            function generatePreview() {
+                let formData = new FormData(document.getElementById("textParamsForm"));
+                fetch("/preview", {
+                    method: "POST",
+                    body: formData
+                }).then(response => response.json())
+                  .then(data => {
+                      document.getElementById("previewImage").src = "data:image/jpeg;base64," + data.preview_image;
+                  });
+            }
+        </script>
+    </head>
+<body>
+    <h2>Upload Video and Excel Files</h2>
+    <form action="/upload_files" method="post" enctype="multipart/form-data">
+        {% if video_exists %}
+            <p>Video file already uploaded: video.mp4</p>
+            <input type="file" name="video">
+        {% else %}
+            <input type="file" name="video" required>
+        {% endif %}
+
+        {% if excel_exists %}
+            <p>Excel file already uploaded: names.xlsx</p>
+            <input type="file" name="excel">
+        {% else %}
+            <input type="file" name="excel" required>
+        {% endif %}
+
+        <input type="submit" value="Upload">
+    </form>
+</body>
+</html>
