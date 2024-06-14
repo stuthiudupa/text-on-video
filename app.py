@@ -123,6 +123,8 @@ def process_videos():
     names = df['Names'].tolist()
 
     output_dir = app.config['OUTPUT_FOLDER']
+    upload_dir = app.config['UPLOAD_FOLDER']
+    static_dir = app.static_folder
     links = []
 
     for name in names:
@@ -145,6 +147,14 @@ def process_videos():
     # Clear the output_videos folder
     shutil.rmtree(output_dir)
     os.makedirs(output_dir, exist_ok=True)
+    
+    # Clear the uploads folder
+    shutil.rmtree(upload_dir)
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Clear the static folder
+    shutil.rmtree(static_dir)
+    os.makedirs(static_dir, exist_ok=True)
     
     return response
 
