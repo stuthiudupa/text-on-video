@@ -3,6 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <title>Text Parameters</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            height: 100vh;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            max-width: 1200px;
+            width: 100%;
+            margin-top: 24px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .form-container {
+            background-color: #fff;
+            padding: 20px;
+            margin-right: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 45%;
+        }
+        .preview-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 65%;
+            text-align: center;
+        }
+        h2 {
+            color: #333;
+        }
+        form div {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .position-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .position-container div {
+            flex: 1;
+        }
+        small {
+            display: block;
+            margin-top: 5px;
+            color: #666;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        #previewImage {
+            max-width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        .start-over {
+            background-color: #dc3545;
+            margin-top: 20px;
+        }
+        .start-over:hover {
+            background-color: #c82333;
+        }
+    </style>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Load initial frame
@@ -11,7 +111,7 @@
         });
 
         function generatePreview(event) {
-            event.preventDefault();  // Prevent the form from submitting the traditional way
+            event.preventDefault(); 
 
             const formData = new FormData(document.getElementById('textParamsForm'));
 
@@ -22,62 +122,133 @@
             .then(response => response.json())
             .then(data => {
                 const imgElement = document.getElementById('previewImage');
-                imgElement.src = data.preview_image_url + '?' + new Date().getTime();  // Append a timestamp to prevent caching
+                imgElement.src = data.preview_image_url + '?' + new Date().getTime();  // timestamp to prevent caching
             })
             .catch(error => console.error('Error:', error));
         }
 
         function setTextParams() {
-            document.getElementById("hidden_stext").value = document.getElementById("stext").value;
+
+            alert("Please wait while the videos are being processed. The excel file will download automatically");
+
             document.getElementById("hidden_font_size").value = document.getElementById("font_size").value;
+            document.getElementById("hidden_font").value = document.getElementById("font").value;
             document.getElementById("hidden_color").value = document.getElementById("color").value;
+            document.getElementById("hidden_duration").value = document.getElementById("duration").value;
             document.getElementById("hidden_position_x").value = document.getElementById("position_x").value;
             document.getElementById("hidden_position_y").value = document.getElementById("position_y").value;
+        }
+        function uploadCustomFont() {
+            const formData = new FormData();
+            const fileInput = document.getElementById('customFont');
+            formData.append('customFont', fileInput.files[0]);
+
+            fetch('/upload_custom_font', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Optionally display a success message or handle errors
+                console.log('Custom font uploaded successfully:', data.font_filename);
+                
+                // Refresh the font dropdown
+                refreshFontDropdown();
+            })
+            .catch(error => console.error('Error uploading custom font:', error));
+        }
+
+        function refreshFontDropdown() {
+            fetch('/get_fonts')
+            .then(response => response.json())
+            .then(data => {
+                const fontSelect = document.getElementById('fontSelect');
+                fontSelect.innerHTML = '';  // Clear existing options
+
+                // Populate dropdown with new fonts
+                data.fonts.forEach(font => {
+                    const option = document.createElement('option');
+                    option.value = font;
+                    option.textContent = font;
+                    fontSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error refreshing font dropdown:', error));
         }
     </script>
 </head>
 <body>
-    <h2>Text Parameters</h2>
-    <form id="textParamsForm" onsubmit="generatePreview(event)">
-        <div>
-            <label for="stext">Text:</label>
-            <input type="text" id="stext" name="stext" value="Sample Text">
+    <div class="container">
+        <div class="form-container">
+            <h2>Text Parameters</h2>
+            <form id="textParamsForm" onsubmit="generatePreview(event)">
+                <div>
+                    <label for="stext">Text:</label>
+                    <input type="text" id="stext" name="stext" value="Sample Text">
+                </div>
+                <div class="position-container">
+                    <div>
+                    <label for="font_size">Font Size:</label>
+                    <input type="number" id="font_size" name="font_size" value="50">
+                </div>
+                <div>
+                    <label for="duration">Duration(in seconds):</label>
+                    <input type="number" id="duration" name="duration" value="10">
+                </div>
+                </div>
+                <div class="position-container">
+                    <div>
+                    <label for="font">Available Fonts:</label>
+                    <select id="font" name="font">
+                        {% for font in fonts %}
+                            <option value="{{ font }}">{{ font }}</option>
+                        {% endfor %}
+                    </select></div>
+                    <div>
+                        <label for="customFont">Upload Custom Font (.ttf):</label>
+                        <input type="file" id="customFont" name="custom_font">
+                        <button type="button" style="font-size: 14px; padding: 8px; margin-top: 8px; " onclick="uploadCustomFont()">Upload Font</button>
+                        <small>Refresh the page after uploading</small>
+                    </div>
+                    
+                </div>
+                <div style="margin-top: -38px;">
+                    <label for="color">Color:</label>
+                    <input type="text" id="color" name="color" value="#ffffff">
+                    <small>Enter color in hex code (e.g., #ffffff for white)</small>
+                </div>
+                <div class="position-container">
+                    <div>
+                        <label for="position_x">Position X:</label>
+                        <input type="text" id="position_x" name="position_x" value="center">
+                    </div>
+                    <div>
+                        <label for="position_y">Position Y:</label>
+                        <input type="text" id="position_y" name="position_y" value="center">
+                    </div>
+            </div>
+            <small style="margin-top: -24px; margin-bottom: 27px;">Enter "center" or a numeric value</small>
+                
+                <button style="margin-bottom: 10px;" type="submit">Generate Preview</button>
+            </form>
         </div>
-        <div>
-            <label for="font_size">Font Size:</label>
-            <input type="number" id="font_size" name="font_size" value="50">
-        </div>
-        <div>
-            <label for="color">Color:</label>
-            <input type="text" id="color" name="color" value="white">
-        </div>
-        <div>
-            <label for="font">Font:</label>
-            <input type="text" id="font" name="font" value="cambria">
-        </div>
-        <div>
-            <label for="position_x">Position X:</label>
-            <input type="text" id="position_x" name="position_x" value="center">
-        </div>
-        <div>
-            <label for="position_y">Position Y:</label>
-            <input type="text" id="position_y" name="position_y" value="center">
-        </div>
-        <button type="submit">Generate Preview</button>
-    </form>
 
-    <h2>Preview</h2>
-    <img id="previewImage" src="#" alt="Text Preview" style="display:block; width:500px; height:auto;">
-
-    <h2>Process Videos</h2>
-    <form action="{{ url_for('process_videos') }}" method="post">
-        <input type="hidden" name="stext" id="hidden_stext">
-        <input type="hidden" name="font_size" id="hidden_font_size">
-        <input type="hidden" name="color" id="hidden_color">
-        <input type="hidden" name="font" id="hidden_font">
-        <input type="hidden" name="position_x" id="hidden_position_x">
-        <input type="hidden" name="position_y" id="hidden_position_y">
-        <button type="submit" onclick="setTextParams()">Process Videos</button>
-    </form>
+        <div class="preview-container">
+            <h2>Preview</h2>
+            <img id="previewImage" src="#" alt="Text Preview">
+            <h2 style="margin-top: 22px;">Process Videos</h2>
+            <form action="{{ url_for('process_videos') }}" method="post">
+                <input type="hidden" name="font_size" id="hidden_font_size">
+                <input type="hidden" name="color" id="hidden_color">
+                <input type="hidden" name="duration" id="hidden_duration">
+                <input type="hidden" name="font" id="hidden_font">
+                <input type="hidden" name="position_x" id="hidden_position_x">
+                <input type="hidden" name="position_y" id="hidden_position_y">
+                <button type="submit" onclick="setTextParams()">Process Now</button>
+            </form>
+            <button class="start-over" onclick="window.location.href='/'">Start Over</button>
+        </div>
+        
+    </div>
 </body>
 </html>
