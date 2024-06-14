@@ -5,8 +5,7 @@ import os
 import cv2
 from PIL import Image, ImageDraw, ImageFont
 import requests
-import base64
-from io import BytesIO
+import shutil
 
 app = Flask(__name__)
 
@@ -66,7 +65,20 @@ def upload_files():
         excel_path = os.path.join(app.config['UPLOAD_FOLDER'], 'names.xlsx')
         excel_file.save(excel_path)
 
-    return redirect(url_for('text_params_form'))
+    # Retrieve available fonts without the .ttf extension
+    fonts = [os.path.splitext(f)[0] for f in os.listdir(app.config['FONT_FOLDER']) if f.endswith('.ttf')]
+
+    return render_template('text_params.html', fonts=fonts)
+
+
+
+@app.route('/upload_custom_font', methods=['POST'])
+def upload_custom_font():
+    custom_font = request.files.get('customFont')
+    if custom_font and custom_font.filename.endswith('.ttf'):
+        custom_font.save(os.path.join(app.config['FONT_FOLDER'], custom_font.filename))
+        return redirect(url_for('text_params_form'))
+    return jsonify({'error': 'Invalid font file or format.'}), 400
 
 
 @app.route('/text_params_form')
@@ -97,8 +109,8 @@ def process_videos():
     font_size = int(request.form['font_size'])
     color = request.form['color']
     position = (request.form['position_x'], request.form['position_y'])
-    font_path = os.path.join(app.config['FONT_FOLDER'], 'cambria.ttf')
-
+    font_path = os.path.join(app.config['FONT_FOLDER'], request.form['font'] + '.ttf')
+    
     excel_path = os.path.join(app.config['UPLOAD_FOLDER'], 'names.xlsx')
     if not os.path.exists(excel_path):
         return "No Excel file found. Please upload the Excel file."
@@ -117,18 +129,26 @@ def process_videos():
         output_video_path = os.path.join(output_dir, f"{name}.mp4")
         overlay_text_on_video(video_path, name, output_video_path, font_path, font_size, 10, color, position)
 
-    #     upload_response = upload_video_to_imgur(output_video_path)
-    #     if upload_response and 'data' in upload_response and 'link' in upload_response['data']:
-    #         links.append(upload_response['data']['link'])
-    #     else:
-    #         links.append("Upload failed")
+        upload_response = upload_video_to_imgur(output_video_path)
+        if upload_response and 'data' in upload_response and 'link' in upload_response['data']:
+            links.append(upload_response['data']['link'])
+        else:
+            links.append("Upload failed")
 
-    # df['Video Link'] = links
-    # updated_excel_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'updated_names.xlsx')
-    # df.to_excel(updated_excel_filename, index=False)
+    df['Video Link'] = links
+    updated_excel_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'updated_names.xlsx')
+    df.to_excel(updated_excel_filename, index=False)
 
-    # return send_file(updated_excel_filename, as_attachment=True)
-    return "Video processed successfully"
+    # Send the Excel file and then clean up
+    response = send_file(updated_excel_filename, as_attachment=True)
+    
+    # Clear the output_videos folder
+    shutil.rmtree(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    return response
+
+
 
 def upload_video_to_imgur(video_path):
     headers = {"Authorization": f"Client-ID {IMGUR_CLIENT_ID}"}
@@ -145,6 +165,7 @@ def overlay_text_on_video(input_video_path, text, output_video_path, font_path='
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
+    duration = int(duration)
     text_duration_frames = int(fps * duration)
 
     try:
@@ -171,8 +192,15 @@ def overlay_text_on_video(input_video_path, text, output_video_path, font_path='
     cv2.destroyAllWindows()
 
 def overlay_text_on_frame(frame, text, font, color, position):
+    # Convert the OpenCV frame to a PIL image
     pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
+    # Create a drawing context
     draw = ImageDraw.Draw(pil_image)
+
+    color = color.strip()
+
+    # Calculate the size and position of the text
     text_bbox = draw.textbbox((0, 0), text, font=font)
     text_width = text_bbox[2] - text_bbox[0]
     text_height = text_bbox[3] - text_bbox[1]
@@ -186,7 +214,10 @@ def overlay_text_on_frame(frame, text, font, color, position):
     else:
         text_y = int(position[1])
 
+    # Draw the text on the image
     draw.text((text_x, text_y), text, font=font, fill=color)
+
+    # Convert the PIL image back to an OpenCV image
     return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
 
@@ -203,7 +234,6 @@ def get_video_frame(video_path):
         return None
 
 
-
 def overlay_text_on_image(frame, text, font_path, font_size, color, position):
     pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(pil_image)
@@ -212,7 +242,7 @@ def overlay_text_on_image(frame, text, font_path, font_size, color, position):
         font = ImageFont.truetype(font_path, font_size)
     except IOError:
         print(f"Could not load font at {font_path}")
-        return frame
+        return pil_image
     
     text_bbox = draw.textbbox((0, 0), text, font=font)
     text_width = text_bbox[2] - text_bbox[0]
@@ -229,6 +259,11 @@ def overlay_text_on_image(frame, text, font_path, font_size, color, position):
 
     draw.text((text_x, text_y), text, font=font, fill=color)
     return pil_image
-    
+
+
+@app.route('/loading')
+def loading_page():
+    return render_template('loading.html')
+
 if __name__ == "__main__":
     app.run(debug=True)
