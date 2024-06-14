@@ -6,6 +6,14 @@ import cv2
 from PIL import Image, ImageDraw, ImageFont
 import requests
 import shutil
+import vimeo
+
+client = vimeo.VimeoClient(
+  token='c0e83a1c6831112c116a4ec3cea1d7aa',
+  key='64e67a1447b7cfb7e129fa62436751193ea984eb',
+  secret='nlKJIWOn0Mat7dcTfsQnxyanI3lE/syTcJ7CNn424iB0c3Rjc7HlrR7KwjkQpGusFDW8qyXETtHqHEdmtierpL38gxmgCBaAtnWci0ZOUFeMqDjrMMnd3k6LeMSnUEA/'
+)
+
 
 app = Flask(__name__)
 
@@ -22,10 +30,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 os.makedirs(FONT_FOLDER, exist_ok=True)
 
-# Imgur API setup
-IMGUR_CLIENT_ID = '5033ecb46422140'
-IMGUR_CLIENT_SECRET = '5b8e6047a13717034d6f299acf621a4e3d6254a9'
-IMGUR_UPLOAD_URL = 'https://api.imgur.com/3/upload'
 
 @app.route('/')
 def upload_form():
@@ -108,6 +112,7 @@ def preview():
 def process_videos():
     font_size = int(request.form['font_size'])
     color = request.form['color']
+    duration = request.form['duration']
     position = (request.form['position_x'], request.form['position_y'])
     font_path = os.path.join(app.config['FONT_FOLDER'], request.form['font'] + '.ttf')
     
@@ -123,20 +128,18 @@ def process_videos():
     names = df['Names'].tolist()
 
     output_dir = app.config['OUTPUT_FOLDER']
-    upload_dir = app.config['UPLOAD_FOLDER']
-    static_dir = app.static_folder
     links = []
 
     for name in names:
         output_video_path = os.path.join(output_dir, f"{name}.mp4")
-        overlay_text_on_video(video_path, name, output_video_path, font_path, font_size, 10, color, position)
+        overlay_text_on_video(video_path, name, output_video_path, font_path, font_size, duration, color, position)
 
-        upload_response = upload_video_to_imgur(output_video_path)
-        if upload_response and 'data' in upload_response and 'link' in upload_response['data']:
-            links.append(upload_response['data']['link'])
+        video_uri = client.upload(output_video_path)
+        video_uri = f"https://vimeo.com/manage{video_uri}"
+        if video_uri:
+            links.append(video_uri)
         else:
             links.append("Upload failed")
-
     df['Video Link'] = links
     updated_excel_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'updated_names.xlsx')
     df.to_excel(updated_excel_filename, index=False)
@@ -150,14 +153,6 @@ def process_videos():
     
     return response
 
-
-
-def upload_video_to_imgur(video_path):
-    headers = {"Authorization": f"Client-ID {IMGUR_CLIENT_ID}"}
-    with open(video_path, 'rb') as video_file:
-        files = {'video': video_file}
-        response = requests.post(IMGUR_UPLOAD_URL, headers=headers, files=files)
-    return response.json()
 
 def overlay_text_on_video(input_video_path, text, output_video_path, font_path='cambria.ttf', font_size=50, duration=10, color='white', position=('center', 'center')):
     cap = cv2.VideoCapture(input_video_path)
