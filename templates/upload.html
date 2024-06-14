@@ -1,39 +1,84 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Upload Files</title>
-        <script>
-            function generatePreview() {
-                let formData = new FormData(document.getElementById("textParamsForm"));
-                fetch("/preview", {
-                    method: "POST",
-                    body: formData
-                }).then(response => response.json())
-                  .then(data => {
-                      document.getElementById("previewImage").src = "data:image/jpeg;base64," + data.preview_image;
-                  });
-            }
-        </script>
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Files</title>
+    <style>
+        .custom-file-input {
+            display: none;
+        }
+
+        .custom-file-label, .change-button {
+            display: inline-block;
+            cursor: pointer;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            margin-right: 10px;
+            text-align: center;
+        }
+
+        .file-name {
+            font-style: italic;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+    <script>
+        function updateFileName(inputId, labelId) {
+            const input = document.getElementById(inputId);
+            const label = document.getElementById(labelId);
+            const fileName = input.files[0] ? input.files[0].name : 'No file chosen';
+            label.textContent = fileName;
+        }
+
+        function generatePreview() {
+            let formData = new FormData(document.getElementById("textParamsForm"));
+            fetch("/preview", {
+                method: "POST",
+                body: formData
+            }).then(response => response.json())
+              .then(data => {
+                  document.getElementById("previewImage").src = "data:image/jpeg;base64," + data.preview_image;
+              });
+        }
+
+        function showFileInput(inputId, labelId, buttonId) {
+            document.getElementById(inputId).classList.remove('hidden');
+            document.getElementById(labelId).classList.remove('hidden');
+            document.getElementById(buttonId).classList.add('hidden');
+        }
+    </script>
+</head>
 <body>
     <h2>Upload Video and Excel Files</h2>
     <form action="/upload_files" method="post" enctype="multipart/form-data">
         {% if video_exists %}
             <p>Video file already uploaded: video.mp4</p>
-            <input type="file" name="video">
+            <button type="button" id="change-video" class="change-button" onclick="showFileInput('video', 'video-label', 'change-video')">Change</button>
+            <label for="video" id="video-label" class="custom-file-label hidden">Choose video file</label>
+            <input type="file" id="video" name="video" class="custom-file-input hidden" onchange="updateFileName('video', 'video-label')">
         {% else %}
-            <input type="file" name="video" required>
+            <label for="video" class="custom-file-label">Choose video file</label>
+            <input type="file" id="video" name="video" class="custom-file-input" required onchange="updateFileName('video', 'video-label')">
+            <span id="video-label" class="file-name">No file chosen</span>
         {% endif %}
 
         {% if excel_exists %}
             <p>Excel file already uploaded: names.xlsx</p>
-            <input type="file" name="excel">
+            <button type="button" id="change-excel" class="change-button" onclick="showFileInput('excel', 'excel-label', 'change-excel')">Change</button>
+            <label for="excel" id="excel-label" class="custom-file-label hidden">Choose Excel file</label>
+            <input type="file" id="excel" name="excel" class="custom-file-input hidden" onchange="updateFileName('excel', 'excel-label')">
         {% else %}
-            <input type="file" name="excel" required>
+            <label for="excel" class="custom-file-label">Choose Excel file</label>
+            <input type="file" id="excel" name="excel" class="custom-file-input" required onchange="updateFileName('excel', 'excel-label')">
+            <span id="excel-label" class="file-name">No file chosen</span>
         {% endif %}
 
-        <input type="submit" value="Upload">
+        <input type="submit" value="Upload and Proceed">
     </form>
 </body>
 </html>
