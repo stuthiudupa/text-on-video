@@ -7,6 +7,8 @@ from PIL import Image, ImageDraw, ImageFont
 import requests
 import shutil
 import vimeo
+from gtts import gTTS
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip
 
 client = vimeo.VimeoClient(
   token='c0e83a1c6831112c116a4ec3cea1d7aa',
@@ -130,16 +132,34 @@ def process_videos():
     output_dir = app.config['OUTPUT_FOLDER']
     links = []
 
+    
     for name in names:
         output_video_path = os.path.join(output_dir, f"{name}.mp4")
+        video_clip = VideoFileClip(video_path)
         overlay_text_on_video(video_path, name, output_video_path, font_path, font_size, duration, color, position)
 
-        video_uri = client.upload(output_video_path)
+        # Generate voice saying the name
+        tts = gTTS(text=name, lang='en')
+        audio_path = os.path.join(output_dir, f"{name}.mp3")
+        tts.save(audio_path)
+
+        new_audio_clip = AudioFileClip(audio_path)
+        composite_audio_clip = CompositeAudioClip([video_clip.audio, new_audio_clip])
+
+        # Add voice to the video
+        final_video_path = os.path.join(output_dir, f"final_{name}.mp4")
+        video_clip = VideoFileClip(output_video_path)
+        video_clip.audio = composite_audio_clip
+        video_clip.write_videofile(final_video_path)
+
+        # Upload the video and get the URI
+        video_uri = client.upload(final_video_path)
         video_uri = f"https://vimeo.com/manage{video_uri}"
         if video_uri:
             links.append(video_uri)
         else:
             links.append("Upload failed")
+
     df['Video Link'] = links
     updated_excel_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'updated_names.xlsx')
     df.to_excel(updated_excel_filename, index=False)
@@ -216,6 +236,12 @@ def overlay_text_on_frame(frame, text, font, color, position):
 
     # Convert the PIL image back to an OpenCV image
     return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+
+# def add_audio_to_video(video_path, audio_path, output_path):
+#     video_clip = VideoFileClip(video_path)
+#     audio_clip = AudioFileClip(audio_path)
+#     final_clip = video_clip.set_audio(audio_clip)
+#     final_clip.write_videofile(output_path, codec='libx264')
 
 
 def get_video_frame(video_path):
