@@ -11,9 +11,9 @@ from gtts import gTTS
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip
 
 client = vimeo.VimeoClient(
-  token='c0e83a1c6831112c116a4ec3cea1d7aa',
-  key='64e67a1447b7cfb7e129fa62436751193ea984eb',
-  secret='nlKJIWOn0Mat7dcTfsQnxyanI3lE/syTcJ7CNn424iB0c3Rjc7HlrR7KwjkQpGusFDW8qyXETtHqHEdmtierpL38gxmgCBaAtnWci0ZOUFeMqDjrMMnd3k6LeMSnUEA/'
+  token='cc5cb2c2e8a38c18f453eadf28e51abc',
+  key='42826cd1a1c38740a2b381de4cf675fd00cf173c',
+  secret='ODN+/IX23Xdt3y7arQV6FHSb31cDo8l+ST2cdUFcWwAT7US+dKJtFutxJ5H95oUZXuR0WQdZtulf7SlkQDr/Ld/jCRcNZF3o1TAcMjNjAeb0NPiKpZxfuVnlbyvryeT5'
 )
 
 
