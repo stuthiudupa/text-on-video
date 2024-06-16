@@ -129,7 +129,7 @@
 
         function setTextParams() {
 
-            alert("Please wait while the videos are being processed. The excel file will download automatically");
+            alert("Please wait while the videos are being processed. The excel/zip file will download automatically");
 
             document.getElementById("hidden_font_size").value = document.getElementById("font_size").value;
             document.getElementById("hidden_font").value = document.getElementById("font").value;
@@ -244,6 +244,20 @@
                 <input type="hidden" name="font" id="hidden_font">
                 <input type="hidden" name="position_x" id="hidden_position_x">
                 <input type="hidden" name="position_y" id="hidden_position_y">
+                <div class="position-container">
+                <div>
+                    <select id="textaud" name="textaud">
+                            <option value="text-only">Text Only</option>
+                            <option value="text-audio">Text with Audio</option>
+                    </select>
+                </div>
+                <div>
+                    <select id="vid" name="vid">
+                            <option value="excel">Download Excel File</option>
+                            <option value="zip">Download Zip File</option>
+                        </select>
+                    <div>
+                        </div>
                 <button type="submit" onclick="setTextParams()">Process Now</button>
             </form>
             <button class="start-over" onclick="window.location.href='/'">Start Over</button>
