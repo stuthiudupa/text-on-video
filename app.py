@@ -9,11 +9,15 @@ import shutil
 import vimeo
 from gtts import gTTS
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip
+import zipfile
+from io import BytesIO
+from flask import send_file
+
 
 client = vimeo.VimeoClient(
-  token='cc5cb2c2e8a38c18f453eadf28e51abc',
-  key='42826cd1a1c38740a2b381de4cf675fd00cf173c',
-  secret='ODN+/IX23Xdt3y7arQV6FHSb31cDo8l+ST2cdUFcWwAT7US+dKJtFutxJ5H95oUZXuR0WQdZtulf7SlkQDr/Ld/jCRcNZF3o1TAcMjNjAeb0NPiKpZxfuVnlbyvryeT5'
+  token='c0e83a1c6831112c116a4ec3cea1d7aa',
+  key='64e67a1447b7cfb7e129fa62436751193ea984eb',
+  secret='nlKJIWOn0Mat7dcTfsQnxyanI3lE/syTcJ7CNn424iB0c3Rjc7HlrR7KwjkQpGusFDW8qyXETtHqHEdmtierpL38gxmgCBaAtnWci0ZOUFeMqDjrMMnd3k6LeMSnUEA/'
 )
 
 
@@ -117,6 +121,9 @@ def process_videos():
     duration = request.form['duration']
     position = (request.form['position_x'], request.form['position_y'])
     font_path = os.path.join(app.config['FONT_FOLDER'], request.form['font'] + '.ttf')
+
+    textaud = request.form['textaud']
+    vid = request.form['vid']    
     
     excel_path = os.path.join(app.config['UPLOAD_FOLDER'], 'names.xlsx')
     if not os.path.exists(excel_path):
@@ -138,35 +145,54 @@ def process_videos():
         video_clip = VideoFileClip(video_path)
         overlay_text_on_video(video_path, name, output_video_path, font_path, font_size, duration, color, position)
 
-        # Generate voice saying the name
-        tts = gTTS(text=name, lang='en')
-        audio_path = os.path.join(output_dir, f"{name}.mp3")
-        tts.save(audio_path)
+        if textaud == "text-audio":
+            # Generate voice saying the name
+            tts = gTTS(text=name, lang='en')
+            audio_path = os.path.join(output_dir, f"{name}.mp3")
+            tts.save(audio_path)
 
-        new_audio_clip = AudioFileClip(audio_path)
-        composite_audio_clip = CompositeAudioClip([video_clip.audio, new_audio_clip])
+            new_audio_clip = AudioFileClip(audio_path)
+            composite_audio_clip = CompositeAudioClip([video_clip.audio, new_audio_clip])
 
-        # Add voice to the video
-        final_video_path = os.path.join(output_dir, f"final_{name}.mp4")
-        video_clip = VideoFileClip(output_video_path)
-        video_clip.audio = composite_audio_clip
-        video_clip.write_videofile(final_video_path)
+            
+            # Add voice to the video
+            video_clip = VideoFileClip(output_video_path)
+            video_clip.audio = composite_audio_clip
+            video_clip.write_videofile(output_video_path)
 
+
+        if vid == "excel":
         # Upload the video and get the URI
-        video_uri = client.upload(final_video_path)
-        video_uri = f"https://vimeo.com/manage{video_uri}"
-        if video_uri:
-            links.append(video_uri)
-        else:
-            links.append("Upload failed")
+            video_uri = client.upload(output_video_path)
+            video_uri = f"https://vimeo.com/manage{video_uri}"
+            if video_uri:
+                links.append(video_uri)
+            else:
+                links.append("Upload failed")
 
-    df['Video Link'] = links
-    updated_excel_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'updated_names.xlsx')
-    df.to_excel(updated_excel_filename, index=False)
+    if vid == "excel":
+        df['Video Link'] = links
+        updated_excel_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'updated_names.xlsx')
+        df.to_excel(updated_excel_filename, index=False)
 
-    # Send the Excel file and then clean up
-    response = send_file(updated_excel_filename, as_attachment=True)
+        # Send the Excel file and then clean up
+        response = send_file(updated_excel_filename, as_attachment=True)
     
+    elif vid == "zip":
+    # Create a zip file
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
+            for index, name in enumerate(names):
+                output_video_path = os.path.join(output_dir, f"{name}.mp4")
+                formatted_index = f"{index:03d}_"
+                base_name = os.path.basename(output_video_path)
+                new_name = formatted_index + base_name
+                zip_file.write(output_video_path, new_name)
+        zip_buffer.seek(0)
+
+        # Send the zip file as a response
+        response = send_file(zip_buffer, mimetype='application/zip', as_attachment=True, download_name='output_videos.zip')
+
     # Clear the output_videos folder
     shutil.rmtree(output_dir)
     os.makedirs(output_dir, exist_ok=True)
